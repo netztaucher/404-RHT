@@ -127,22 +127,34 @@ def scan_log(log_path: str, prefix: str, start_offset: int) -> Tuple[Dict, int]:
 
 
 def format_report(host: str, prefix: str, hits: Dict[str, Dict]) -> str:
+    # Referrer → missing path → count
+    by_ref: Dict[str, collections.Counter] = {}
+    for path, entry in hits.items():
+        for ref, cnt in entry["referrers"].items():
+            ref_key = ref or "-"
+            bucket = by_ref.setdefault(ref_key, collections.Counter())
+            bucket[path] += cnt
+
     lines = []
     lines.append(f"404 report for {host}")
     lines.append(f"Watched prefix: {prefix}")
     lines.append("")
+    lines.append("Grouped by referrer (missing file → hits):")
+    for ref in sorted(by_ref.keys()):
+        lines.append(f"Referrer: {ref}")
+        for path, cnt in by_ref[ref].most_common():
+            lines.append(f"  {path} ({cnt})")
+        lines.append("")
+
+    lines.append("Per missing file (hits, window):")
     for path in sorted(hits.keys()):
         entry = hits[path]
-        lines.append(f"{path}")
-        lines.append(f"  hits: {entry['count']}")
+        lines.append(f"{path} [{entry['count']}]")
         lines.append(
             "  window: {0} to {1}".format(
                 entry["first"].isoformat(), entry["last"].isoformat()
             )
         )
-        for ref, count in entry["referrers"].most_common():
-            label = ref if ref else "-"
-            lines.append(f"  referrer[{count}]: {label}")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
