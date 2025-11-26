@@ -155,11 +155,11 @@ def format_report(host: str, prefix: str, hits: Dict[str, Dict]) -> str:
     lines.append(f"404 report for {host}")
     lines.append(f"Watched prefix: {prefix}")
     lines.append("")
-    lines.append("Grouped by referrer (missing file → hits):")
+    lines.append("Grouped by referrer (missing files):")
     for ref in sorted(by_ref.keys()):
-        lines.append(f"Referrer: {ref}")
+        lines.append(f"### Referrer: {ref}")
         for path, cnt in by_ref[ref].most_common():
-            lines.append(f"  {path} ({cnt})")
+            lines.append(f"- {path} ({cnt} hits)")
         lines.append("")
 
     lines.append("Per missing file (hits, window):")
