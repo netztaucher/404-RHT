@@ -121,6 +121,7 @@ def scan_log(
     images_only: bool,
     image_exts: Tuple[str, ...],
     exclude_prefixes: Tuple[str, ...],
+    exclude_prefixes_extra: Tuple[str, ...],
 ) -> Tuple[Dict, int]:
     hits: Dict[str, Dict] = {}
     offset = start_offset
@@ -139,6 +140,8 @@ def scan_log(
                 continue
             path = m.group("path")
             if exclude_prefixes and any(path.startswith(pfx) for pfx in exclude_prefixes):
+                continue
+            if exclude_prefixes_extra and any(path.startswith(pfx) for pfx in exclude_prefixes_extra):
                 continue
             if prefix and not path.startswith(prefix):
                 continue
@@ -167,23 +170,28 @@ def format_report(host: str, prefix: str, hits: Dict[str, Dict]) -> str:
             bucket[path] += cnt
 
     esc = html.escape
+    def linkify(url: str) -> str:
+        if url in {"", "-"}:
+            return esc(url)
+        safe = esc(url)
+        return f'<a href="{safe}">{safe}</a>'
+
     lines = []
     lines.append("<!DOCTYPE html>")
     lines.append("<html><body>")
     lines.append(f"<h2>404-Report für {esc(host)}</h2>")
     lines.append(f"<p>Überwachte Pfade: {esc(prefix) if prefix else 'alle'}</p>")
     lines.append("<h3>Nach Referrer gruppiert</h3>")
-    for ref in sorted(by_ref.keys()):
-        lines.append(f"<h4>Referrer: {esc(ref)}</h4>")
+    for ref, counter in sorted(by_ref.items(), key=lambda kv: sum(kv[1].values()), reverse=True):
+        lines.append(f"<h4>{linkify(ref)}</h4>")
         lines.append("<ul>")
-        for path, cnt in by_ref[ref].most_common():
+        for path, cnt in counter.most_common():
             lines.append(f"<li>{esc(path)} ({cnt} Treffer)</li>")
         lines.append("</ul>")
 
     lines.append("<h3>Übersicht pro fehlender Datei</h3>")
     lines.append("<ul>")
-    for path in sorted(hits.keys()):
-        entry = hits[path]
+    for path, entry in sorted(hits.items(), key=lambda kv: kv[1]["count"], reverse=True):
         lines.append(
             "<li><strong>{path}</strong> – {cnt} Treffer<br>"
             "<small>Fenster: {first} bis {last}</small></li>".format(
@@ -290,6 +298,13 @@ def parse_args() -> argparse.Namespace:
         default=split_prefix_list(cfg_val("EXCLUDE_PREFIX") or ""),
         type=split_prefix_list,
         help="Comma-separated list of URL prefixes to ignore",
+    )
+    parser.add_argument(
+        "--exclude-prefix-extra",
+        dest="exclude_prefix_extra",
+        default=split_prefix_list(cfg_val("EXCLUDE_PREFIX_EXTRA") or ""),
+        type=split_prefix_list,
+        help="Additional comma-separated URL prefixes to ignore",
     )
     return parser.parse_args(remaining)
 

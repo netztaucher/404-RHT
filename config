@@ -9,3 +9,4 @@ FROM=monitor@kent.kundenserver42.de
 IMAGES_ONLY=true
 IMAGE_EXT=png,jpg,jpeg,gif,webp,avif,ico,bmp,tiff
 EXCLUDE_PREFIX=/public/theme/images
+EXCLUDE_PREFIX_EXTRA=/images/icons/status
