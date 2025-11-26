@@ -1,6 +1,6 @@
 # 404 RHT
 
-Leichter Daily-Watcher für fehlende Bilder. Liest Webserver-Access-Logs, sammelt 404er für Bildpfade und verschickt täglich eine HTML-Zusammenfassung mit Referrer-Gruppierung und Trefferzahlen. Notwehr gegen seltsame Fehler im Gambio-Shop.
+Leichter Daily-Watcher für fehlende Bilder. Liest Webserver-Access-Logs, sammelt 404er für Bildpfade und verschickt täglich eine HTML-Zusammenfassung mit Referrer-Gruppierung und Trefferzahlen.
 
 ## Schnellstart
 
