@@ -8,6 +8,7 @@ and sends a summary email.
 import argparse
 import collections
 import datetime as dt
+import html
 import json
 import os
 import re
@@ -151,28 +152,36 @@ def format_report(host: str, prefix: str, hits: Dict[str, Dict]) -> str:
             bucket = by_ref.setdefault(ref_key, collections.Counter())
             bucket[path] += cnt
 
+    esc = html.escape
     lines = []
-    lines.append(f"404 report for {host}")
-    lines.append(f"Watched prefix: {prefix}")
-    lines.append("")
-    lines.append("Grouped by referrer (missing files):")
+    lines.append("<!DOCTYPE html>")
+    lines.append("<html><body>")
+    lines.append(f"<h2>404-Report für {esc(host)}</h2>")
+    lines.append(f"<p>Überwachte Pfade: {esc(prefix) if prefix else 'alle'}</p>")
+    lines.append("<h3>Nach Referrer gruppiert</h3>")
     for ref in sorted(by_ref.keys()):
-        lines.append(f"### Referrer: {ref}")
+        lines.append(f"<h4>Referrer: {esc(ref)}</h4>")
+        lines.append("<ul>")
         for path, cnt in by_ref[ref].most_common():
-            lines.append(f"- {path} ({cnt} hits)")
-        lines.append("")
+            lines.append(f"<li>{esc(path)} ({cnt} Treffer)</li>")
+        lines.append("</ul>")
 
-    lines.append("Per missing file (hits, window):")
+    lines.append("<h3>Übersicht pro fehlender Datei</h3>")
+    lines.append("<ul>")
     for path in sorted(hits.keys()):
         entry = hits[path]
-        lines.append(f"{path} [{entry['count']}]")
         lines.append(
-            "  window: {0} to {1}".format(
-                entry["first"].isoformat(), entry["last"].isoformat()
+            "<li><strong>{path}</strong> – {cnt} Treffer<br>"
+            "<small>Fenster: {first} bis {last}</small></li>".format(
+                path=esc(path),
+                cnt=entry["count"],
+                first=entry["first"].isoformat(),
+                last=entry["last"].isoformat(),
             )
         )
-        lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+    lines.append("</ul>")
+    lines.append("</body></html>")
+    return "\n".join(lines)
 
 
 def send_email(to_addr: str, subject: str, body: str, from_addr: str = "") -> bool:
@@ -181,6 +190,8 @@ def send_email(to_addr: str, subject: str, body: str, from_addr: str = "") -> bo
         f"From: {sender}",
         f"To: {to_addr}",
         f"Subject: {subject}",
+        "MIME-Version: 1.0",
+        "Content-Type: text/html; charset=UTF-8",
         "",
         body,
     ]
