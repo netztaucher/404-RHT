@@ -70,6 +70,11 @@ def is_image_path(path: str, image_exts: Tuple[str, ...]) -> bool:
     return any(low.endswith(f".{ext}") for ext in image_exts)
 
 
+def split_prefix_list(raw: str) -> Tuple[str, ...]:
+    items = [part.strip() for part in raw.split(",") if part.strip()]
+    return tuple(items)
+
+
 def parse_time(raw: str) -> dt.datetime:
     """Parse common log time format, return naive UTC datetime if no tz provided."""
     try:
@@ -109,7 +114,14 @@ def determine_start(log_path: str, state: Dict) -> Tuple[int, int]:
     return 0, inode
 
 
-def scan_log(log_path: str, prefix: str, start_offset: int, images_only: bool, image_exts: Tuple[str, ...]) -> Tuple[Dict, int]:
+def scan_log(
+    log_path: str,
+    prefix: str,
+    start_offset: int,
+    images_only: bool,
+    image_exts: Tuple[str, ...],
+    exclude_prefixes: Tuple[str, ...],
+) -> Tuple[Dict, int]:
     hits: Dict[str, Dict] = {}
     offset = start_offset
 
@@ -126,6 +138,8 @@ def scan_log(log_path: str, prefix: str, start_offset: int, images_only: bool, i
             if m.group("status") != "404":
                 continue
             path = m.group("path")
+            if exclude_prefixes and any(path.startswith(pfx) for pfx in exclude_prefixes):
+                continue
             if prefix and not path.startswith(prefix):
                 continue
             if images_only and not is_image_path(path, image_exts):
@@ -271,6 +285,12 @@ def parse_args() -> argparse.Namespace:
         type=split_ext_list,
         help="Comma-separated list of image extensions to include (when --images-only is set)",
     )
+    parser.add_argument(
+        "--exclude-prefix",
+        default=split_prefix_list(cfg_val("EXCLUDE_PREFIX") or ""),
+        type=split_prefix_list,
+        help="Comma-separated list of URL prefixes to ignore",
+    )
     return parser.parse_args(remaining)
 
 
@@ -287,7 +307,14 @@ def main() -> int:
     state = load_state(args.state)
     start_offset, inode = determine_start(args.log, state)
 
-    hits, new_offset = scan_log(args.log, args.prefix, start_offset, args.images_only, tuple(args.image_ext))
+    hits, new_offset = scan_log(
+        args.log,
+        args.prefix,
+        start_offset,
+        args.images_only,
+        tuple(args.image_ext),
+        tuple(args.exclude_prefix),
+    )
     save_state(args.state, {"inode": inode, "offset": new_offset})
 
     if not hits:
