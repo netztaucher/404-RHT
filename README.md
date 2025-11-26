@@ -1,12 +1,12 @@
 # 404 RHT
 
-Lightweight daily watcher for missing images under a specific path. Parses webserver access logs, records 404s for that path, and sends a single daily summary email listing missing files and their referrers.
+Leichter Daily-Watcher für fehlende Bilder. Liest Webserver-Access-Logs, sammelt 404er für Bildpfade und verschickt täglich eine HTML-Zusammenfassung mit Referrer-Gruppierung und Trefferzahlen. Notwehr gegen seltsame Fehler im Gambio-Shop.
 
-## Quick start
+## Schnellstart
 
-Prereqs: Python 3.8+, `sendmail` (or compatible MTA) available on `PATH`.
+Voraussetzungen: Python 3.8+, `sendmail` (oder kompatibles MTA) im `PATH`.
 
-Example:
+Beispiel:
 
 ```
 python3 watch_404.py \
@@ -18,46 +18,44 @@ python3 watch_404.py \
   --host web01
 ```
 
-Add a cron entry to send once per day, e.g. 07:00:
+Cron täglich 07:00 CET (Produktion kent: `/etc/cron.d/404-rht`):
 
 ```
 0 7 * * * /usr/bin/python3 /opt/404-rht/watch_404.py --log /var/log/nginx/access.log --prefix /static/img/ --state /var/lib/404-rht/state.json --to alerts@example.com --from monitor@example.com --host web01 >> /var/log/404-rht.log 2>&1
 ```
 
-In Produktion (kent) läuft der Cron täglich um 07:00 CET aus `/etc/cron.d/404-rht`.
+## Config-Datei
 
-## Config file support
-
-You can provide a simple `config` file (KEY=VALUE) to avoid long CLI flags:
+`config` (KEY=VALUE) reduziert die CLI-Flags:
 
 ```
 PATH=/var/www/vhosts/web125.kent.kundenserver42.de/httpdocs/gx4802/images
-SERVER=kunt.kundenserver42.de
+PREFIX=/
+SERVER=kent.kundenserver42.de
 LOG=/var/log/nginx/access.log
 TO=alerts@example.com
 FROM=monitor@example.com
 STATE=/var/lib/404-rht/state.json
 IMAGES_ONLY=true
-IMAGE_EXT=png,jpg,jpeg,gif,webp,avif,ico,bmp,tiff   # Steuerung der erlaubten Bild-Endungen
+IMAGE_EXT=png,jpg,jpeg,gif,webp,avif,ico,bmp,tiff   # Bild-Endungen
 EXCLUDE_PREFIX=/public/theme/images,/images/icons/status
 ```
 
-- `PATH` (or `PREFIX`) is used as the URL path prefix; if it looks like a filesystem path, the script heuristically derives a URL prefix (e.g. strips `/httpdocs` → `/gx4802/images`).
-- `SERVER` sets the host label in reports.
-- `IMAGES_ONLY`/`IMAGE_EXT` beschränken den Report auf bestimmte Bild-Endungen.
-- `EXCLUDE_PREFIX` (kommagetrennt) filtert bekannte, zu ignorierende Pfad-Präfixe.
-- Other keys map directly to the flags of the same name. CLI flags always override config entries.
-- Place the script wherever you want (`DIR`), keep `config` alongside it, and point Cron to that location.
+- `PATH`/`PREFIX` setzen den beobachteten URL-Pfad; Filesystem-Pfade werden heuristisch in URLs übersetzt (z. B. `/httpdocs` → `/gx4802/images`).
+- `SERVER` steuert den Hostnamen im Report.
+- `IMAGES_ONLY`/`IMAGE_EXT` begrenzen auf gewünschte Bild-Endungen.
+- `EXCLUDE_PREFIX` (kommagetrennt) blendet bekannte Pfad-Präfixe aus.
+- Alle übrigen Keys entsprechen den CLI-Flags; Flags überschreiben die Config. Script und `config` können gemeinsam liegen, Cron zeigt darauf.
 
-## How it works
+## Funktionsweise
 
-- Reads only new lines since the last run (offset stored in `--state` JSON file with inode tracking to survive logrotate).
-- Detects 404 responses; optionally restricts to a prefix and/or image extensions.
-- Aggregates per missing path: total hits, first/last seen timestamps, and referrers with counts.
-- Sends an HTML report via `sendmail -t` if any misses occurred; exits quietly otherwise.
+- Liest nur neue Logzeilen seit dem letzten Lauf (State: JSON mit inode/offset, logrotate-sicher).
+- Findet 404-Responses; optional per Prefix und Bild-Endungen gefiltert; ignoriert definierte Prefixe.
+- Aggregiert pro fehlender Datei: Trefferzahl, Zeitfenster, Referrer (mit Counts), Referrer-Linkliste sortiert nach Treffern.
+- Sendet einen HTML-Report via `sendmail -t`; keine Funde → stiller Exit.
 
-## Notes
+## Hinweise
 
-- Tested against common Nginx/Apache combined log formats (`"$method $path HTTP/1.1" $status ... "referer"`).
-- If `sendmail` is unavailable, the script prints the email body to stdout so Cron logs still show the report.
-- Adjust `--prefix` to match the public URL path of your image directory (leading slash required).
+- Getestet mit gängigen Nginx/Apache Combined Logs (`"$method $path HTTP/1.1" $status ... "referer"`).
+- Ohne `sendmail` wird der Report auf stdout gedruckt (sichtbar im Cron-Log).
+- `--prefix` sollte mit `/` beginnen, wenn genutzt.
