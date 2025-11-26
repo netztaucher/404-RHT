@@ -1,7 +1,8 @@
 PATH=/var/www/vhosts/web125.kent.kundenserver42.de/httpdocs/gx4802/images
+PREFIX=/
 SERVER=kent.kundenserver42.de
 DIR=/root/wartungsscripte/404/
 LOG=/var/www/vhosts/web125.kent.kundenserver42.de/logs/reinigungs-hygienetechnik.de/access_ssl_log
 STATE=/root/wartungsscripte/404/state.json
-TO=neuber@netztaucher.com
+TO=mail@reinigungs-hygienetechnik.de
 FROM=monitor@kent.kundenserver42.de
