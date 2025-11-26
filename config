@@ -7,3 +7,4 @@ STATE=/root/wartungsscripte/404/state.json
 TO=mail@reinigungs-hygienetechnik.de
 FROM=monitor@kent.kundenserver42.de
 IMAGES_ONLY=true
+IMAGE_EXT=png,jpg,jpeg,gif,webp,avif,ico,bmp,tiff
