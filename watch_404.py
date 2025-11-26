@@ -100,7 +100,10 @@ def scan_log(log_path: str, prefix: str, start_offset: int) -> Tuple[Dict, int]:
 
     with open(log_path, "r", encoding="utf-8", errors="ignore") as fh:
         fh.seek(start_offset)
-        for line in fh:
+        while True:
+            line = fh.readline()
+            if not line:
+                break
             offset = fh.tell()
             m = LOG_PATTERN.search(line)
             if not m:
