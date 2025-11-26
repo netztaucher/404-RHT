@@ -329,6 +329,7 @@ def main() -> int:
         args.images_only,
         tuple(args.image_ext),
         tuple(args.exclude_prefix),
+        tuple(args.exclude_prefix_extra),
     )
     save_state(args.state, {"inode": inode, "offset": new_offset})
 
