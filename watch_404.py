@@ -55,6 +55,20 @@ def derive_prefix_from_path(path: str) -> str:
     return suffix or "/"
 
 
+def parse_bool(val: str) -> bool:
+    return val.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def split_ext_list(raw: str) -> Tuple[str, ...]:
+    items = [part.strip().lower() for part in raw.split(",") if part.strip()]
+    return tuple(items)
+
+
+def is_image_path(path: str, image_exts: Tuple[str, ...]) -> bool:
+    low = path.lower().split("?", 1)[0]
+    return any(low.endswith(f".{ext}") for ext in image_exts)
+
+
 def parse_time(raw: str) -> dt.datetime:
     """Parse common log time format, return naive UTC datetime if no tz provided."""
     try:
@@ -94,7 +108,7 @@ def determine_start(log_path: str, state: Dict) -> Tuple[int, int]:
     return 0, inode
 
 
-def scan_log(log_path: str, prefix: str, start_offset: int) -> Tuple[Dict, int]:
+def scan_log(log_path: str, prefix: str, start_offset: int, images_only: bool, image_exts: Tuple[str, ...]) -> Tuple[Dict, int]:
     hits: Dict[str, Dict] = {}
     offset = start_offset
 
@@ -111,7 +125,9 @@ def scan_log(log_path: str, prefix: str, start_offset: int) -> Tuple[Dict, int]:
             if m.group("status") != "404":
                 continue
             path = m.group("path")
-            if not path.startswith(prefix):
+            if prefix and not path.startswith(prefix):
+                continue
+            if images_only and not is_image_path(path, image_exts):
                 continue
             ts = parse_time(m.group("time"))
             referer = m.group("referer") if m.group("referer") != "-" else ""
@@ -232,13 +248,25 @@ def parse_args() -> argparse.Namespace:
         default=cfg_val("SUBJECT") or "",
         help="Email subject (default: 404 report for <host>)",
     )
+    parser.add_argument(
+        "--images-only",
+        action="store_true",
+        default=parse_bool(cfg_val("IMAGES_ONLY")) if cfg_val("IMAGES_ONLY") else False,
+        help="If set, only 404s for image-like extensions are reported",
+    )
+    parser.add_argument(
+        "--image-ext",
+        default=split_ext_list(cfg_val("IMAGE_EXT") or "png,jpg,jpeg,gif,webp,avif,svg,ico,bmp,tiff"),
+        type=split_ext_list,
+        help="Comma-separated list of image extensions to include (when --images-only is set)",
+    )
     return parser.parse_args(remaining)
 
 
 def main() -> int:
     args = parse_args()
 
-    if not args.prefix.startswith("/"):
+    if args.prefix and not args.prefix.startswith("/"):
         print("--prefix must start with '/': got", args.prefix, file=sys.stderr)
         return 1
     if not os.path.exists(args.log):
@@ -248,7 +276,7 @@ def main() -> int:
     state = load_state(args.state)
     start_offset, inode = determine_start(args.log, state)
 
-    hits, new_offset = scan_log(args.log, args.prefix, start_offset)
+    hits, new_offset = scan_log(args.log, args.prefix, start_offset, args.images_only, tuple(args.image_ext))
     save_state(args.state, {"inode": inode, "offset": new_offset})
 
     if not hits:

@@ -45,7 +45,7 @@ STATE=/var/lib/404-rht/state.json
 ## How it works
 
 - Reads only new lines since the last run (offset stored in `--state` JSON file with inode tracking to survive logrotate).
-- Detects 404 responses where the requested path starts with `--prefix`.
+- Detects 404 responses; optionally restricts to a prefix and/or image extensions.
 - Aggregates per missing path: total hits, first/last seen timestamps, and referrers with counts.
 - Sends a plain-text report via `sendmail -t` if any misses occurred; exits quietly otherwise.
 
