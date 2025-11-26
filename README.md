@@ -26,12 +26,12 @@ Cron täglich 07:00 CET (Produktion kent: `/etc/cron.d/404-rht`):
 
 ## Config-Datei
 
-`config` (KEY=VALUE) reduziert die CLI-Flags:
+`config` (KEY=VALUE) reduziert die CLI-Flags (Beispiel mit anonymisierten Platzhaltern):
 
 ```
-PATH=/var/www/vhosts/web125.kent.kundenserver42.de/httpdocs/gx4802/images
+PATH=/var/www/vhosts/<vhost>/httpdocs/gx4802/images
 PREFIX=/
-SERVER=kent.kundenserver42.de
+SERVER=<host.example.tld>
 LOG=/var/log/nginx/access.log
 TO=alerts@example.com
 FROM=monitor@example.com
